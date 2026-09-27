@@ -1,0 +1,15 @@
+{
+  "name": "Korektor LJK Sekolah PWA",
+  "short_name": "KoreksiLJK",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
