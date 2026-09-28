@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ljk-cache-v1';
+const CACHE_NAME = 'ljk-grid-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
