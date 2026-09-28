@@ -1,5 +1,5 @@
 /**
- * OMR Engine Khusus Format Tabel & Menyilang (X)
+ * OMR Engine Khusus Format Tabel Grid & Menyilang (X)
  */
 
 function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, answerKeys) {
@@ -15,7 +15,7 @@ function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, ans
   // 1. Ubah ke Grayscale
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
-  // 2. Adaptive Thresholding agar peka terhadap silangan pensil/pulpen yang tipis
+  // 2. Adaptive Thresholding agar peka membaca goresan silang (X) yang tipis/kurang sempurna
   cv.adaptiveThreshold(
     gray, thresh, 255,
     cv.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -25,17 +25,15 @@ function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, ans
   let studentAnswers = [];
   const optionsText = ['A', 'B', 'C', 'D', 'E'];
 
-  // Hitung jumlah tabel/blok berdasarkan total soal dan baris per tabel
+  // Hitung jumlah tabel/blok
   let tableCount = Math.ceil(totalQuestions / rowsPerTable);
 
-  // Koordinat Grid Dinamis (Persentase terhadap ukuran gambar)
   let imgWidth = thresh.cols;
   let imgHeight = thresh.rows;
 
   let questionIndex = 0;
 
   for (let t = 0; t < tableCount; t++) {
-    // Estimasi posisi X tabel ke-t
     let tableWidthRatio = 1.0 / tableCount;
     let tableX = t * tableWidthRatio * imgWidth;
 
@@ -43,34 +41,33 @@ function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, ans
       if (questionIndex >= totalQuestions) break;
 
       let cellHeight = (imgHeight * 0.85) / rowsPerTable;
-      let cellY = (imgHeight * 0.1) + (r * cellHeight);
+      let cellY = (imgHeight * 0.08) + (r * cellHeight);
 
       let maxDarkness = -1;
       let selectedOption = -1;
 
       // Periksa tiap kolom pilihan (A, B, C, D, E)
       for (let opt = 0; opt < optionCount; opt++) {
-        let colWidth = (tableWidthRatio * imgWidth * 0.8) / (optionCount + 1);
-        let cellX = tableX + (tableWidthRatio * imgWidth * 0.18) + (opt * colWidth);
+        let colWidth = (tableWidthRatio * imgWidth * 0.78) / (optionCount + 1);
+        let cellX = tableX + (tableWidthRatio * imgWidth * 0.20) + (opt * colWidth);
 
-        // Crop bagian tengah kotak (padding 20% agar garis kotak tidak terhitung)
+        // Crop bagian tengah kotak (padding 20% agar garis tepi tabel hitam tidak terhitung)
         let rect = new cv.Rect(
-          Math.floor(cellX + colWidth * 0.2),
-          Math.floor(cellY + cellHeight * 0.2),
-          Math.floor(colWidth * 0.6),
-          Math.floor(cellHeight * 0.6)
+          Math.floor(cellX + colWidth * 0.20),
+          Math.floor(cellY + cellHeight * 0.20),
+          Math.floor(colWidth * 0.60),
+          Math.floor(cellHeight * 0.60)
         );
 
-        // Pastikan rect berada di dalam batas gambar
+        // Validasi batas gambar
         if (rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= imgWidth && rect.y + rect.height <= imgHeight) {
           let cellMat = thresh.roi(rect);
-          let darkPixels = cv.countNonZero(cellMat); // Hitung piksel silangan
+          let darkPixels = cv.countNonZero(cellMat);
           let totalPixels = rect.width * rect.height;
           let darknessRatio = darkPixels / totalPixels;
 
           cellMat.delete();
 
-          // Ambang Peka: Jika piksel gelap paling tinggi di antara pilihan lain
           if (darknessRatio > maxDarkness) {
             maxDarkness = darknessRatio;
             selectedOption = opt;
@@ -78,11 +75,11 @@ function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, ans
         }
       }
 
-      // Ambang peka minimal (misal > 0.10 / 10% terisi silangan) dianggap diisi
-      if (maxDarkness > 0.10 && selectedOption !== -1) {
+      // Sensitivitas: Jika kerapatan piksel hitam > 0.08 (8%) dianggap ada tanda silang
+      if (maxDarkness > 0.08 && selectedOption !== -1) {
         studentAnswers.push(optionsText[selectedOption]);
       } else {
-        studentAnswers.push('-'); // Tidak diisi / Kosong
+        studentAnswers.push('-'); // Tidak diisi
       }
 
       questionIndex++;
@@ -99,7 +96,7 @@ function processGridOMR(canvasId, totalQuestions, rowsPerTable, optionCount, ans
 
   let finalScore = Math.round((correctCount / totalQuestions) * 100);
 
-  // Clean memory
+  // Free memory OpenCV
   src.delete();
   gray.delete();
   thresh.delete();
