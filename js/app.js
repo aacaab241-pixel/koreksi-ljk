@@ -1,75 +1,61 @@
-// 1. Generator PDF LJK Murni Tabel Grid (Tanpa Header / Kop)
-function generateGridPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+// Registrasi Service Worker PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
 
-  const totalQuestions = parseInt(document.getElementById('question-count').value);
-  const rowsPerTable = parseInt(document.getElementById('rows-per-table').value);
-  const optionCount = parseInt(document.getElementById('option-count').value);
+let isOpenCvReady = false;
+let currentExamConfig = JSON.parse(localStorage.getItem('exam_grid_config')) || {
+  title: 'Penilaian Harian',
+  qCount: 25,
+  rowsPerTable: 10,
+  optCount: 5,
+  keys: Array(25).fill('A')
+};
+let scanHistory = JSON.parse(localStorage.getItem('scan_grid_results')) || [];
+let currentLastResult = null;
+
+function onOpenCvReady() {
+  isOpenCvReady = true;
+  const statusBadge = document.getElementById('cv-status');
+  statusBadge.innerText = 'OpenCV Siap';
+  statusBadge.classList.add('ready');
+  initCamera();
+}
+
+// Navigasi Tab
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+  event.target.classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+// Inisialisasi Tampilan awal
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('exam-title').value = currentExamConfig.title;
+  document.getElementById('question-count').value = currentExamConfig.qCount;
+  document.getElementById('rows-per-table').value = currentExamConfig.rowsPerTable;
+  document.getElementById('option-count').value = currentExamConfig.optCount;
+
+  renderKeyInputs();
+  renderHistory();
+});
+
+// Render Input Kunci Jawaban Dinamis
+function renderKeyInputs() {
+  const container = document.getElementById('key-inputs-container');
+  const count = parseInt(document.getElementById('question-count').value) || 1;
+  const optCount = parseInt(document.getElementById('option-count').value) || 4;
   const optionsText = ['A', 'B', 'C', 'D', 'E'];
 
-  let tableCount = Math.ceil(totalQuestions / rowsPerTable);
-  let startX = 15;
-  let startY = 20;
-  let cellWidth = 8;
-  let cellHeight = 7;
-
-  let questionNum = 1;
-
-  for (let t = 0; t < tableCount; t++) {
-    let currentX = startX + (t * (optionCount + 2) * cellWidth);
-
-    for (let r = 0; r < rowsPerTable; r++) {
-      if (questionNum > totalQuestions) break;
-
-      let currentY = startY + (r * cellHeight);
-
-      // Gambar Kotak Nomor Soal
-      doc.rect(currentX, currentY, cellWidth + 2, cellHeight);
-      doc.setFontSize(8);
-      doc.text(`${questionNum}.`, currentX + 2, currentY + 5);
-
-      // Gambar Kotak Pilihan (A, B, C, D, E)
-      for (let opt = 0; opt < optionCount; opt++) {
-        let optX = currentX + cellWidth + 2 + (opt * cellWidth);
-        doc.rect(optX, currentY, cellWidth, cellHeight);
-        doc.text(optionsText[opt], optX + 2.5, currentY + 5);
-      }
-
-      questionNum++;
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    let opts = '';
+    let selectedKey = currentExamConfig.keys[i] || 'A';
+    
+    for (let o = 0; o < optCount; o++) {
+      let isSel = optionsText[o] === selectedKey ? 'selected' : '';
+      opts += `${optionsText[o]}`;
     }
-  }
-
-  doc.save(`LJK_Grid_${totalQuestions}_Soal.pdf`);
-}
-
-// 2. Handler Panggil OMR Grid saat Tombol Scan Ditekan
-function processScan() {
-  const video = document.getElementById('webcam');
-  const canvas = document.getElementById('canvas-out');
-  const ctx = canvas.getContext('2d');
-
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  const totalQuestions = currentExamConfig.qCount;
-  const rowsPerTable = parseInt(document.getElementById('rows-per-table').value) || 10;
-  const optionCount = currentExamConfig.optCount;
-
-  // Memanggil fungsi baru di omr-engine.js
-  currentLastResult = processGridOMR(
-    'canvas-out',
-    totalQuestions,
-    rowsPerTable,
-    optionCount,
-    currentExamConfig.keys
-  );
-
-  if (currentLastResult) {
-    document.getElementById('res-score').innerText = currentLastResult.score;
-    document.getElementById('res-correct').innerText = currentLastResult.correct;
-    document.getElementById('res-wrong').innerText = currentLastResult.wrong;
-    document.getElementById('scan-result').style.display = 'block';
-  }
-}
+    container.innerHTML += `
