@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Korektor LJK Sekolah</title>
+  <title>Korektor LJK Grid Silang</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
   
@@ -15,7 +15,7 @@
 <body>
 
   <header class="app-header">
-    <h1>Korektor LJK PWA</h1>
+    <h1>Scan LJK Grid</h1>
     <span id="cv-status" class="status-badge">Memuat OpenCV...</span>
   </header>
 
@@ -23,52 +23,39 @@
     
     <!-- Tab Navigation -->
     <nav class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('profile')">Profil Sekolah</button>
-      <button class="tab-btn" onclick="switchTab('exam')">Ujian & LJK</button>
-      <button class="tab-btn" onclick="switchTab('scan')">Scan & Hasil</button>
+      <button class="tab-btn active" onclick="switchTab('exam')">Pengaturan & LJK</button>
+      <button class="tab-btn" onclick="switchTab('scan')">Kamera & Scan</button>
     </nav>
 
-    <!-- SECTION 1: Profil Sekolah -->
-    <section id="tab-profile" class="tab-content active">
-      <h2>Pengaturan Sekolah & Guru</h2>
+    <!-- SECTION 1: Buat Ujian & Cetak LJK -->
+    <section id="tab-exam" class="tab-content active">
+      <h2>Pengaturan Format LJK</h2>
+      
       <div class="form-group">
-        <label>Nama Sekolah</label>
-        <input type="text" id="school-name" placeholder="misal: SMA Negeri 1 Jakarta">
+        <label>Judul Ujian / Mapel</label>
+        <input type="text" id="exam-title" placeholder="misal: Penilaian Harian Matematika">
       </div>
-      <div class="form-group">
-        <label>Nama Guru Pengampu</label>
-        <input type="text" id="teacher-name" placeholder="misal: Budi Santoso, S.Pd.">
-      </div>
-      <div class="form-group">
-        <label>Logo Sekolah</label>
-        <input type="file" id="school-logo-input" accept="image/*">
-        <div id="logo-preview-box">
-          <img id="logo-preview" src="" alt="Preview Logo" style="display:none;">
-        </div>
-      </div>
-      <button class="btn btn-primary" onclick="saveProfile()">Simpan Profil</button>
-    </section>
 
-    <!-- SECTION 2: Buat Ujian & Cetak LJK -->
-    <section id="tab-exam" class="tab-content">
-      <h2>Pengaturan Ujian</h2>
-      <div class="form-group">
-        <label>Mata Pelajaran / Ujian</label>
-        <input type="text" id="exam-title" placeholder="misal: Penilaian Harian IPA">
-      </div>
       <div class="form-group">
         <label>Jumlah Soal</label>
-        <select id="question-count">
-          <option value="10">10 Soal</option>
-          <option value="20" selected>20 Soal</option>
-          <option value="30">30 Soal</option>
+        <input type="number" id="question-count" value="25" min="1" max="100">
+      </div>
+
+      <div class="form-group">
+        <label>Jumlah Baris Per Tabel</label>
+        <select id="rows-per-table">
+          <option value="5">5 Baris</option>
+          <option value="10" selected>10 Baris</option>
+          <option value="15">15 Baris</option>
+          <option value="20">20 Baris</option>
         </select>
       </div>
+
       <div class="form-group">
         <label>Pilihan Jawaban</label>
         <select id="option-count">
           <option value="4">A - D (4 Pilihan)</option>
-          <option value="5">A - E (5 Pilihan)</option>
+          <option value="5" selected>A - E (5 Pilihan)</option>
         </select>
       </div>
 
@@ -76,33 +63,39 @@
       <div id="key-inputs-container" class="key-grid"></div>
 
       <div class="action-buttons">
-        <button class="btn btn-success" onclick="generateLJKPDF()">Cetak PDF LJK</button>
-        <button class="btn btn-primary" onclick="saveExamConfig()">Simpan Ujian</button>
+        <button class="btn btn-success" onclick="generateGridPDF()">Cetak PDF LJK</button>
+        <button class="btn btn-primary" onclick="saveExamConfig()">Simpan Kunci</button>
       </div>
     </section>
 
-    <!-- SECTION 3: Kamera & Scan -->
+    <!-- SECTION 2: Kamera & Scan -->
     <section id="tab-scan" class="tab-content">
-      <h2>Kamera Scan LJK</h2>
+      <h2>Kamera Scan Jawaban</h2>
+      
       <div class="camera-wrapper">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="canvas-out"></canvas>
       </div>
+      
       <button class="btn btn-danger btn-block" onclick="processScan()">Pindai / Scan Jawaban</button>
 
       <div id="scan-result" class="result-card" style="display:none;">
         <h3>Hasil Penilaian</h3>
-        <p>Nilai: <strong id="res-score">0</strong> / 100</p>
+        <p class="score-display">Nilai: <strong id="res-score">0</strong> / 100</p>
         <p>Benar: <span id="res-correct">0</span> | Salah: <span id="res-wrong">0</span></p>
-        <div class="form-group">
-          <input type="text" id="student-name" placeholder="Nama Siswa">
+        
+        <div class="form-group" style="margin-top: 10px;">
+          <input type="text" id="student-name" placeholder="Nama Siswa / No. Absen">
         </div>
-        <button class="btn btn-success" onclick="saveStudentResult()">Simpan Hasil Siswa</button>
+        <button class="btn btn-success btn-block" onclick="saveStudentResult()">Simpan Nilai Siswa</button>
       </div>
 
       <hr style="margin: 20px 0;">
-      <h3>Rekap Nilai Class</h3>
-      <button class="btn btn-secondary" onclick="exportToExcel()">Export Rekap Excel (.xlsx)</button>
+      
+      <div class="history-header">
+        <h3>Rekap Nilai Siswa</h3>
+        <button class="btn btn-secondary" onclick="exportToExcel()">Export Excel (.xlsx)</button>
+      </div>
       <ul id="history-list" class="history-list"></ul>
     </section>
 
