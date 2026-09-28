@@ -1,6 +1,6 @@
 {
-  "name": "Korektor LJK Sekolah PWA",
-  "short_name": "KoreksiLJK",
+  "name": "Korektor LJK Grid PWA",
+  "short_name": "LJKGrid",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
